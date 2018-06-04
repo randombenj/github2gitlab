@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -x
+
+USER="$1"
+GITLAB_TOKEN="$2"
+
+
+copy_repo()
+{
+  repo="$1"
+
+  name=$(echo $repo | cut -d/ -f5 | cut -d. -f1)
+  git clone $repo
+  repo_url=$(curl --header "Private-Token: $GITLAB_TOKEN" \
+   --data "name=$name" \
+   https://gitlab.com/api/v4/projects | jq -r '.ssh_url_to_repo')
+
+  cd $name
+
+  git remote add upstream $repo_url
+  git push upstream --all
+
+  cd -
+}
+
+REPOS=$(curl -sHi https://api.github.com/users/$USER/repos | jq -r '.[].clone_url')
+for repo in $REPOS
+do
+  copy_repo $repo
+done
+
+
+
